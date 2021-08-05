@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Meteo History</title>
+    <!-- DataTables CSS library -->
+    <link rel="stylesheet" type="text/css" href="DataTables/datatables.min.css" />
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <!-- DataTables JS library -->
+    <script type="text/javascript" src="./DataTables/datatables.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.min.js"></script>
+</head>
+
+<body>
+
+
+    <div class="container">
+        <h2>History</h2>
+        <table id="history">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Place</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Weather</th>
+                    <th>Motif</th>
+                    <th>Temp</th>
+                    <th>WindSpeed</th>
+                    <th>WindDirection</th>
+                    <th>Humidity</th>
+                    <th>Visibility</th>
+                    <th>Clouds</th>
+                    <th>Pressure</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+
+</body>
+
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#history').dataTable({
+            "bProcessing": true,
+            "sAjaxSource": "getHistory.php",
+            "aoColumns": [{
+                mData: 'dateSave'
+            }, {
+                mData: 'timeSave'
+            }, {
+                mData: 'placeName'
+            }, {
+                mData: 'lat'
+            }, {
+                mData: 'lon'
+            }, {
+                mData: 'description'
+            }, {
+                mData: 'motif'
+            }, {
+                mData: 'temperature'
+            }, {
+                mData: 'windSpeed'
+            }, {
+                mData: 'windDirection'
+            }, {
+                mData: 'humidity'
+            }, {
+                mData: 'visibility'
+            }, {
+                mData: 'clouds'
+            }, {
+                mData: 'pressure'
+            }]
+        });
+    });
+</script>
+
+</html>

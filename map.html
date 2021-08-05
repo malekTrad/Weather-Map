@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Meteo</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v5.3.0/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+
+    <link rel="stylesheet" type="text/css" href="css/lib/control/iconselect.css">
+    <script type="text/javascript" src="lib/control/iconselect.js"></script>
+    <script type="text/javascript" src="lib/iscroll.js"></script>
+
+    <script src="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/build/ol.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <!-- Loading third party fonts -->
+    <link href="http://fonts.googleapis.com/css?family=Roboto:300,400,700|" rel="stylesheet" type="text/css">
+    <link href="fonts/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Loading main css file -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .table-dark td,
+        .table-dark th,
+        .table-dark thead th {
+            border: none;
+        }
+        
+        .table-dark {
+            background-color: transparent;
+            margin: 0 !important;
+        }
+        
+        .map {
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        .get-time {
+            margin: 0;
+            right: 20px;
+            position: relative;
+        }
+        
+        .padd-tab td,
+        .padd-tab th {
+            padding: 0 !important;
+        }
+        
+        .modal-footer {
+            border-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        .icon-select .box {
+            width: 222px;
+            height: 62px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map" class="map"></div>
+    <div id="my-icon-select" style="position: absolute; top: 10px; left: 50px; background-color: rgba(255,255,255,0.5);"></div>
+    <button id="history" onclick="window.open('/maps/history.html','popUpWindow','height=700,width=1420,left=10,top=10,,scrollbars=yes,menubar=no'); return false;" style="position: absolute;margin: 0px;padding: 0px; bottom: 5px; left: 30px;width: 70px;height: 60px;background-color: transparent;border: 1px solid #999999;"><img style="background-color: transparent;" src="images/history.png"></button>
+
+    <script>
+        var Map = ol.Map; //~ import Map from 'ol/Map.js';
+        var View = ol.View; //~ import View from 'ol/View.js';
+        var {
+            easeIn,
+            easeOut
+        } = ol.easing; //~ import {easeIn, easeOut} from 'ol/easing.js';
+        var TileLayer = ol.layer.Tile; //~ import TileLayer from 'ol/layer/Tile.js';
+        var {
+            fromLonLat
+        } = ol.proj; //~ import {fromLonLat} from 'ol/proj.js';
+        var OSM = ol.source.OSM; //~ import OSM from 'ol/source/OSM.js';      
+        var BingMaps = ol.source.BingMaps;
+
+        var styles = [
+            'Road',
+            'RoadOnDemand',
+            'Aerial',
+            'AerialWithLabels',
+
+        ];
+        var layers = [];
+        var i, ii;
+        for (i = 0, ii = styles.length; i < ii; ++i) {
+            layers.push(new TileLayer({
+                visible: false,
+                preload: Infinity,
+                source: new BingMaps({
+                    key: 'your_BingMaps_APIKEY',
+                    imagerySet: styles[i],
+                    // use maxZoom 19 to see stretched tiles instead of the BingMaps
+                    // "no photos at this zoom level" tiles
+                    maxZoom: 19
+                })
+            }));
+        }
+        var map = new Map({
+            layers: layers,
+            // Improve user experience by loading tiles while dragging/zooming. Will make
+            // zooming choppy on mobile or slow devices.
+            loadTilesWhileInteracting: true,
+            target: 'map',
+            view: new View({
+                center: [1152600.540244, 4006712.258934638],
+                zoom: 7
+            })
+        });
+
+        //using iconselect.js to select the layer of the map
+        layers[3].setVisible(styles[3]);
+        var iconSelect;
+        var select;
+        window.onload = function() {
+            iconSelect = new IconSelect("my-icon-select", {
+                'selectedIconWidth': 48,
+                'selectedIconHeight': 48,
+                'selectedBoxPadding': 5,
+                'iconsWidth': 48,
+                'iconsHeight': 48,
+                'boxIconSpace': 4,
+                'vectoralIconNumber': 4,
+                'horizontalIconNumber': 1
+            });
+
+            var icons = [];
+            icons.push({
+                'iconFilePath': 'images/icons/1.png',
+                'iconValue': 'AerialWithLabels'
+            });
+            icons.push({
+                'iconFilePath': 'images/icons/2.png',
+                'iconValue': 'Aerial'
+            });
+            icons.push({
+                'iconFilePath': 'images/icons/3.png',
+                'iconValue': 'Road'
+            });
+            icons.push({
+                'iconFilePath': 'images/icons/4.png',
+                'iconValue': 'RoadOnDemand'
+            });
+            iconSelect.refresh(icons);
+
+            document.getElementById('my-icon-select').addEventListener('changed', function(e) {
+                var style = iconSelect.getSelectedValue();
+                for (var i = 0, ii = layers.length; i < ii; ++i) {
+                    layers[i].setVisible(styles[i] === style);
+                }
+            });
+        };
+
+
+        function httpGet(url, callback_function) {
+            const getRequest = new XMLHttpRequest();
+            getRequest.open("get", url, true);
+            getRequest.addEventListener("readystatechange", function() {
+
+                // IF RESPONSE is GOOD
+                if (getRequest.readyState === 4 && getRequest.status === 200) {
+
+                    // Callback for making stuff with the Nominatim response address
+                    callback_function(getRequest.responseText);
+                }
+            });
+            // Send the request
+            getRequest.send();
+        }
+
+        //add marker on the map 
+        $(document).ready(function() {
+
+            $("#btn_addmarker").on("click", function() {
+                var lat = $("#latitude").val();
+                var resultLat = parseFloat(lat);
+                var lon = $("#longitude").val();
+                var resultLon = parseFloat(lon);
+
+                var markers = [];
+                markers.push(new ol.Feature({
+                    geometry: new ol.geom.Point(
+                        ol.proj.fromLonLat([resultLon, resultLat])
+                    ),
+                    name: lat + ',' + lon
+                }));
+
+                // markers.push(new ol.Feature({
+                //   geometry: new ol.geom.Point(
+                //     ol.proj.fromLonLat([12.5048055, 41.8968191])
+                //   ),
+                //   name: '289,50'
+                // }));
+
+                var colors = ['red', 'green', 'blue', 'black'];
+                var iconStyles = [];
+
+                colors.forEach(function(color) {
+                    iconStyles.push(new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: 6,
+                            stroke: new ol.style.Stroke({
+                                color: '#fff'
+                            }),
+                            fill: new ol.style.Fill({
+                                color: color
+                            })
+                        })
+                    }))
+                });
+
+                var labelStyle = new ol.style.Style({
+                    text: new ol.style.Text({
+                        font: '12px Calibri,sans-serif',
+                        overflow: true,
+                        fill: new ol.style.Fill({
+                            color: '#000'
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: '#fff',
+                            width: 3
+                        }),
+                        textBaseline: 'bottom',
+                        offsetY: -8
+                    })
+                });
+
+                var vectorSource = new ol.source.Vector({
+                    features: markers
+                });
+                var markerVectorLayer = new ol.layer.Vector({
+                    source: vectorSource,
+                    style: function(feature) {
+                        var name = feature.get('name');
+                        var iconStyle = iconStyles[parseInt(name) % colors.length];
+                        labelStyle.getText().setText(name);
+                        return [iconStyle, labelStyle];
+                    }
+                });
+
+                map.addLayer(markerVectorLayer);
+                map.getView().fit(vectorSource.getExtent(), {
+                    "maxZoom": 7
+                });
+            });
+
+        });
+
+        //get weather using the button
+        $(document).ready(function() {
+            $("#btn_getWeather").on("click", function() {
+
+                var dt = new Date();
+                document.getElementById("datetime").innerHTML = (("0" + dt.getDate()).slice(-2)) + "." + (("0" + (dt.getMonth() + 1)).slice(-2)) + "." + (dt.getFullYear()) + "<br><p class='get-time' > " + (("0" + dt.getHours()).slice(-2)) + ":" + (("0" + dt.getMinutes()).slice(-2)) + '</p>';
+
+                var lat = $("#latitude").val();
+                var resultLat = parseFloat(lat);
+                var lon = $("#longitude").val();
+                var resultLon = parseFloat(lon);
+
+                var markers = [];
+                markers.push(new ol.Feature({
+                    geometry: new ol.geom.Point(
+                        ol.proj.fromLonLat([resultLon, resultLat])
+                    ),
+                    name: lat + ',' + lon
+                }));
+
+                // markers.push(new ol.Feature({
+                //   geometry: new ol.geom.Point(
+                //     ol.proj.fromLonLat([12.5048055, 41.8968191])
+                //   ),
+                //   name: '289,50'
+                // }));
+
+                var colors = ['red', 'green', 'blue', 'black'];
+                var iconStyles = [];
+
+                colors.forEach(function(color) {
+                    iconStyles.push(new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: 6,
+                            stroke: new ol.style.Stroke({
+                                color: '#fff'
+                            }),
+                            fill: new ol.style.Fill({
+                                color: color
+                            })
+                        })
+                    }))
+                });
+
+                var labelStyle = new ol.style.Style({
+                    text: new ol.style.Text({
+                        font: '12px Calibri,sans-serif',
+                        overflow: true,
+                        fill: new ol.style.Fill({
+                            color: '#000'
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: '#fff',
+                            width: 3
+                        }),
+                        textBaseline: 'bottom',
+                        offsetY: -8
+                    })
+                });
+
+                var vectorSource = new ol.source.Vector({
+                    features: markers
+                });
+                var markerVectorLayer = new ol.layer.Vector({
+                    source: vectorSource,
+                    style: function(feature) {
+                        var name = feature.get('name');
+                        var iconStyle = iconStyles[parseInt(name) % colors.length];
+                        labelStyle.getText().setText(name);
+                        return [iconStyle, labelStyle];
+                    }
+                });
+
+                map.addLayer(markerVectorLayer);
+                map.getView().fit(vectorSource.getExtent(), {
+                    "maxZoom": 7
+                });
+
+
+                const data_for_url = {
+                    lon: resultLon,
+                    lat: resultLat,
+                    format: "json",
+                    limit: 1
+                };
+
+                // ENCODED DATA for URL
+                const encoded_data = Object.keys(data_for_url).map(function(k) {
+                    return encodeURIComponent(k) + '=' + encodeURIComponent(data_for_url[k])
+                }).join('&');
+
+                // FULL URL for searching address of mouse click
+                const url_nominatim = 'https://nominatim.openstreetmap.org/reverse?' + encoded_data;
+
+                // GET URL REQUEST for ADDRESS
+                httpGet(url_nominatim, function(response_text) {
+
+                    // JSON Data of the response to the request Nominatim
+                    const data_json = JSON.parse(response_text);
+                    console.log(data_json);
+                    // Longitude and latitude
+                    const res_lon = data_json.lon;
+                    const res_lat = data_json.lat;
+
+                    // All the informations of the address are here
+                    const res_address = data_json.address;
+
+                    // Details depends on the location, country and places
+                    // For example: in the desert, road or pedestrian is 
+                    // probably set to undefined because of none...
+                    const address_display_name = data_json.display_name;
+                    //console.log("Name         : " + address_display_name);
+
+                    //initialize the title to the lon and lat coordonates
+                    var title = "lat=" + lat + "  lon=" + lon;
+                    $("#modalTitle").html(title);
+                    if (address_display_name != null) {
+                        title = address_display_name;
+                        $("#modalTitle").html(title);
+                    }
+
+                    var inputData = "lat=" + resultLat + "&lon=" + resultLon;
+                    $.ajax({
+                        type: 'POST',
+                        url: 'getMeteo.php',
+                        data: inputData,
+                        success: function(result) {
+                            var weatherInfo = jQuery.parseJSON(result);
+                            //console.log(weatherInfo);
+
+                            if ((weatherInfo.sys.country != null) && (address_display_name == null)) {
+                                var title = weatherInfo.name;
+                                $("#modalTitle").html(title);
+                            }
+
+                            $("#modalTitle").html(title);
+                            $("#description").html(weatherInfo.weather[0].description);
+                            $("#temperature").html(Math.round(weatherInfo.main.temp)).append(" °");
+                            $("#windspeed").html(Math.round(weatherInfo.wind.speed * 3.6)).append(" km/h");
+                            $("#winddirection").html(Math.round(weatherInfo.wind.deg)).append(" degree");
+                            $("#humidity").html(weatherInfo.main.humidity).append(" %");
+                            $("#visibility").html(Math.round(weatherInfo.visibility / 1000)).append(" km");
+                            $("#pressure").html(Math.round(weatherInfo.main.pressure)).append(" hPa");
+                            $("#cloudcover").html(weatherInfo.clouds.all).append(" %");
+                            var weatherIconSource = "http://openweathermap.org/img/w/" + weatherInfo.weather[0].icon + ".png";
+                            $("#weatherImage").attr("src", weatherIconSource);
+                            $('#modalWeather').modal('toggle');
+                        }
+                    });
+                    $(document).on('click', '#save', function(e) {
+                        var motif = $("#motif").val();
+                        var namePlace = $('#modalTitle').html();
+                        var inputSavedData = "lat=" + lat + "&lon=" + lon + "&motif=" + motif + "&namePlace=" + namePlace;
+                        $.ajax({
+                            type: 'POST',
+                            url: 'saveData.php',
+                            data: inputSavedData,
+                            success: function(data) {
+                                $('#succes').modal('show');
+
+                            }
+                        });
+                    });
+                });
+            });
+        });
+
+        //get weather on map click
+        map.on('click', function(evt) {
+
+            var dt = new Date();
+            document.getElementById("datetime").innerHTML = (("0" + dt.getDate()).slice(-2)) + "." + (("0" + (dt.getMonth() + 1)).slice(-2)) + "." + (dt.getFullYear()) + "<br><p class='get-time' > " + (("0" + dt.getHours()).slice(-2)) + ":" + (("0" + dt.getMinutes()).slice(-2)) + '</p>';
+
+            // Coords of click is evt.coordinate
+            //console.log("evt.coordinate: " + evt.coordinate);
+            // You must transform the coordinates because evt.coordinate 
+            // is by default Web Mercator (EPSG:3857) 
+            // and not "usual coords" (EPSG:4326) 
+            const coords_click = ol.proj.transform(evt.coordinate, 'EPSG:3857', 'EPSG:4326');
+            //console.log("Mouse Click coordinates: " + coords_click);
+
+            // MOUSE CLICK: Longitude
+            const lon = coords_click[0];
+            // MOUSE CLICK: Latitude
+            const lat = coords_click[1];
+
+            // DATA to put in NOMINATIM URL to find address of mouse click location
+            const data_for_url = {
+                lon: lon,
+                lat: lat,
+                format: "json",
+                limit: 1
+            };
+
+            // ENCODED DATA for URL
+            const encoded_data = Object.keys(data_for_url).map(function(k) {
+                return encodeURIComponent(k) + '=' + encodeURIComponent(data_for_url[k])
+            }).join('&');
+
+            // FULL URL for searching address of mouse click
+            const url_nominatim = 'https://nominatim.openstreetmap.org/reverse?' + encoded_data;
+
+            // GET URL REQUEST for ADDRESS
+            httpGet(url_nominatim, function(response_text) {
+
+                // JSON Data of the response to the request Nominatim
+                const data_json = JSON.parse(response_text);
+                //console.log(data_json);
+                // Longitude and latitude
+                const res_lon = data_json.lon;
+                const res_lat = data_json.lat;
+
+                // All the informations of the address are here
+                const res_address = data_json.address;
+
+                // Details depends on the location, country and places
+                // For example: in the desert, road or pedestrian is 
+                // probably set to undefined because of none...
+                const address_display_name = data_json.display_name;
+                //console.log("Name         : " + address_display_name);
+                var title = "lat=" + lat + "  lon=" + lon;
+                $("#modalTitle").html(title);
+                if (address_display_name != null) {
+                    title = address_display_name;
+                    $("#modalTitle").html(title);
+                }
+
+                var inputData = "lat=" + lat + "&lon=" + lon;
+                $.ajax({
+                    type: 'POST',
+                    url: 'getMeteo.php',
+                    data: inputData,
+                    success: function(result) {
+                        var weatherInfo = jQuery.parseJSON(result);
+                        //console.log(weatherInfo);
+
+                        if ((weatherInfo.sys.country != null) && (address_display_name == null)) {
+                            var title = weatherInfo.name;
+                            $("#modalTitle").html(title);
+                        }
+
+                        $("#modalTitle").html(title);
+                        $("#description").html(weatherInfo.weather[0].description);
+                        $("#temperature").html(Math.round(weatherInfo.main.temp)).append(" °");
+                        $("#windspeed").html(Math.round(weatherInfo.wind.speed * 3.6)).append(" km/h");
+                        $("#winddirection").html(Math.round(weatherInfo.wind.deg)).append(" degree");
+                        $("#humidity").html(weatherInfo.main.humidity).append(" %");
+                        $("#visibility").html(Math.round(weatherInfo.visibility / 1000)).append(" km");
+                        $("#pressure").html(Math.round(weatherInfo.main.pressure)).append(" hPa");
+                        $("#cloudcover").html(weatherInfo.clouds.all).append(" %");
+                        var weatherIconSource = "http://openweathermap.org/img/w/" + weatherInfo.weather[0].icon + ".png";
+                        $("#weatherImage").attr("src", weatherIconSource);
+                        $('#modalWeather').modal('toggle');
+                    }
+                });
+
+                $(document).on('click', '#save', function(e) {
+                    var motif = $("#motif").val();
+                    var namePlace = $('#modalTitle').html();
+                    var inputSavedData = "lat=" + lat + "&lon=" + lon + "&motif=" + motif + "&namePlace=" + namePlace;
+                    $.ajax({
+                        type: 'POST',
+                        url: 'saveData.php',
+                        data: inputSavedData,
+                        success: function(data) {
+                            $('#succes').modal('show');
+                        }
+                    });
+                });
+            });
+        });
+
+
+
+        //initialize the div as hidden
+        $(document).ready(function() {
+            $("#content").hide();
+        });
+
+        //show the div and focus in the text area
+        function show_text() {
+            jQuery('#content').toggle('show');
+            $("#save").show();
+            $("#motif").attr('disabled', false);
+            $('#motif').focus();
+        }
+
+        //when the modal popup closed
+        $(document).on('hide.bs.modal', '#modalWeather', function() {
+            $("#content").hide();
+            document.getElementById('motif').value = "";
+            $("#add").show();
+        });
+        $(document).on('hide.bs.modal', '#succes', function() {
+            $("#save").hide();
+            $("#motif").attr("disabled", "disabled");
+            $("#add").hide();
+        });
+    </script>
+
+
+    <div id="search" style="position: absolute; top: 10px; right: 10px; padding: 3px; background-color: rgba(255,255,255,0.5);">
+        <input id="latitude" type="num" placeholder="Latitude" />
+        <input id="longitude" type="num" placeholder="Longitude" />
+        <input id="btn_addmarker" type="button" value="Add Marker" />
+        <input id="btn_getWeather" type="button" value="Get Weather" />
+    </div>
+
+    <div class="modal fade" id="succes" role="dialog" aria-labelledby="basic" aria-hidden="true" style="z-index: 9999;">
+        <div class="modal-dialog  modal-sm">
+            <div class="modal-content" style="background-color: #ffffff; borderolid 4px #44d775; margin-top: 253px; left: -25px;">
+                <div class="modal-header" style="background-color: #44d775; height: 15px;">
+
+                    <span class="glyphicon glyphicon-ok" style="color: yellow; font-size: large; top: -10px; left: 115px;" aria-hidden="true"></span>
+                    <h4 class="modal-title" id="myModalLabel" style="text-align: center;"></h4>
+                </div>
+                <p style="text-align: center; font-family: 'Ebrima'; color: black; margin-top: 15px;"><strong>Saved Successfully </strong></p>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="modalWeather" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle" aria-hidden="true" style="z-index: 1400;">
+        <div class="modal-dialog modal-dialog-centered container" role="document">
+            <div class="forecast-table">
+                <div class="container">
+                    <div class="forecast-container">
+                        <div class="today forecast">
+                            <div class="forecast-header">
+                                <div class="day"><span id="modalTitle"></div>
+                            </div>
+                            <!-- .forecast-header -->
+                            <div class="forecast-content">
+                                <table class="table table-dark padd-tab" style="width: 100%">
+                                    <tr>
+                                        <td>
+                                            <div class="location"><span id="description"></div>
+                            </div>
+                            </td>
+							<td>
+                                <div style="text-align: right">
+                                    <strong><span id="datetime"></span></strong>
+                                </div>
+                                </td>
+                                </tr>
+                                </table>
+                                <div class="degree">
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <div class="num"><span id="temperature"></div>
+                                    </td>
+                                    <td>
+                                        <div class="forecast-icon">
+                                            <img id="weatherImage" alt="" width="90">
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                            <table class="table table-dark" style="trensparent !important">
+                                <tr>
+                                    <td><span>
+                                        <img src="images/icon-pressure.png" alt=""><span id="pressure"></span></span>
+                                            </td>
+                                            <td><span>
+                                        <img src="images/icon-wind.png" id="windIcon"><span id="windspeed"></span></span>
+                                            </td>
+                                            <td><span>
+                                        <img src="images/icon-compass.png" alt=""><span id="winddirection"></span></span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><span>
+                                        <img src="images/icon-humidity.png" alt="humidity"><span id="humidity"></span></span>
+                                            </td>
+                                            <td><span>
+                                        <img src="images/icon-cloud.png" alt="cloud"><span id="cloudcover"></span></span>
+                                            </td>
+                                            <td><span>
+                                        <img src="images/icon-visibilty.png" alt="visibility"><span id="visibility"></span></span>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    </div>
+                                    <div id='content' class="modal-content" style="background-color: transparent">
+                                        <div class="modal-body">
+                                            <textarea id='motif' class="form-control" placeholder="Motif"></textarea>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-primary" id="save" data-toggle="modal" data-target="#ssss">Sauvegarde</button>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="modal-content">
+                                        <button type="button" id="add" class="btn btn-primary" onclick="show_text();" data-toggle="modal" data-target="#ssss">Ajout</button>
+
+                                    </div>
+                                </div>
+
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+</body>
+
+</html>
